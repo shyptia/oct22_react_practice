@@ -40,18 +40,51 @@ export const App: React.FC = () => {
   const [products] = useState(productsWithCategoryAndUser);
   const [filterBy, setFilterBy] = useState('All');
   const [query, setQuery] = useState('');
+  const [selectedCategoriesId, setSelectedCategoriesId]
+    = useState<number[]>([]);
 
   const filterProducts = () => {
     const normalizedQuery = query.toLowerCase().trim();
 
-    return products.filter(product => {
-      if (filterBy === 'All') {
-        return product?.name.toLowerCase().includes(normalizedQuery);
-      }
+    let filteredProducts = [...products];
 
-      return product?.user.name === filterBy
-        && product?.name.toLowerCase().includes(normalizedQuery);
-    });
+    if (filterBy !== 'All') {
+      filteredProducts = filteredProducts.filter(product => (
+        product?.user.name === filterBy
+      ));
+    }
+
+    if (selectedCategoriesId.length > 0) {
+      // eslint-disable-next-line array-callback-return, consistent-return
+      filteredProducts = filteredProducts.filter(product => {
+        if (product) {
+          return selectedCategoriesId.includes(product.category.id);
+        }
+      });
+    }
+
+    return filteredProducts.filter(product => (
+      product?.name.toLowerCase().includes(normalizedQuery)
+    ));
+  };
+
+  const resetAllFilters = () => {
+    setQuery('');
+    setFilterBy('All');
+    setSelectedCategoriesId([]);
+  };
+
+  const handleSelectCategory = (categoryId: number) => {
+    if (selectedCategoriesId.includes(categoryId)) {
+      setSelectedCategoriesId(categories => (
+        categories.filter(id => id !== categoryId)
+      ));
+    } else {
+      setSelectedCategoriesId(categories => [
+        ...categories,
+        categoryId,
+      ]);
+    }
   };
 
   const visibleProducts = filterProducts();
@@ -125,41 +158,29 @@ export const App: React.FC = () => {
               <a
                 href="#/"
                 data-cy="AllCategories"
-                className="button is-success mr-6 is-outlined"
+                className={cn(
+                  'button is-success mr-6',
+                  { 'is-outlined': selectedCategoriesId.length > 0 },
+                )}
+                onClick={() => setSelectedCategoriesId([])}
               >
                 All
               </a>
 
-              <a
-                data-cy="Category"
-                className="button mr-2 my-1 is-info"
-                href="#/"
-              >
-                Category 1
-              </a>
-
-              <a
-                data-cy="Category"
-                className="button mr-2 my-1"
-                href="#/"
-              >
-                Category 2
-              </a>
-
-              <a
-                data-cy="Category"
-                className="button mr-2 my-1 is-info"
-                href="#/"
-              >
-                Category 3
-              </a>
-              <a
-                data-cy="Category"
-                className="button mr-2 my-1"
-                href="#/"
-              >
-                Category 4
-              </a>
+              {categoriesFromServer.map(category => (
+                <a
+                  key={category.id}
+                  data-cy="Category"
+                  className={cn(
+                    'button mr-2 my-1',
+                    { 'is-info': selectedCategoriesId.includes(category.id) },
+                  )}
+                  href="#/"
+                  onClick={() => handleSelectCategory(category.id)}
+                >
+                  {category.title}
+                </a>
+              ))}
             </div>
 
             <div className="panel-block">
@@ -167,10 +188,7 @@ export const App: React.FC = () => {
                 data-cy="ResetAllButton"
                 href="#/"
                 className="button is-link is-outlined is-fullwidth"
-                onClick={() => {
-                  setQuery('');
-                  setFilterBy('All');
-                }}
+                onClick={resetAllFilters}
               >
                 Reset all filters
               </a>
